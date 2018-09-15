@@ -27,6 +27,11 @@ type AuthConfiguration struct {
 	Password      string `json:"password,omitempty"`
 	Email         string `json:"email,omitempty"`
 	ServerAddress string `json:"serveraddress,omitempty"`
+
+	// IdentityToken can be supplied with the identitytoken response of the AuthCheck call
+	// see https://godoc.org/github.com/docker/docker/api/types#AuthConfig
+	// It can be used in place of password not in conjunction with it
+	IdentityToken string `json:"identitytoken,omitempty"`
 }
 
 // AuthConfigurations represents authentication options to use for the
@@ -42,8 +47,9 @@ type AuthConfigurations119 map[string]AuthConfiguration
 // dockerConfig represents a registry authentation configuration from the
 // .dockercfg file.
 type dockerConfig struct {
-	Auth  string `json:"auth"`
-	Email string `json:"email"`
+	Auth          string `json:"auth"`
+	Email         string `json:"email"`
+	IdentityToken string `json:"identitytoken"`
 }
 
 // NewAuthConfigurationsFromFile returns AuthConfigurations from a path containing JSON
@@ -128,29 +134,44 @@ func authConfigs(confs map[string]dockerConfig) (*AuthConfigurations, error) {
 	c := &AuthConfigurations{
 		Configs: make(map[string]AuthConfiguration),
 	}
+
 	for reg, conf := range confs {
+		if conf.Auth == "" {
+			continue
+		}
 		data, err := base64.StdEncoding.DecodeString(conf.Auth)
 		if err != nil {
 			return nil, err
 		}
+
 		userpass := strings.SplitN(string(data), ":", 2)
 		if len(userpass) != 2 {
 			return nil, ErrCannotParseDockercfg
 		}
-		c.Configs[reg] = AuthConfiguration{
+
+		authConfig := AuthConfiguration{
 			Email:         conf.Email,
 			Username:      userpass[0],
 			Password:      userpass[1],
 			ServerAddress: reg,
 		}
+
+		// if identitytoken provided then zero the password and set it
+		if conf.IdentityToken != "" {
+			authConfig.Password = ""
+			authConfig.IdentityToken = conf.IdentityToken
+		}
+
+		c.Configs[reg] = authConfig
 	}
+
 	return c, nil
 }
 
 // AuthStatus returns the authentication status for Docker API versions >= 1.23.
 type AuthStatus struct {
-	Status        string `json:"Status,omitempty" yaml:"Status,omitempty"`
-	IdentityToken string `json:"IdentityToken,omitempty" yaml:"IdentityToken,omitempty"`
+	Status        string `json:"Status,omitempty" yaml:"Status,omitempty" toml:"Status,omitempty"`
+	IdentityToken string `json:"IdentityToken,omitempty" yaml:"IdentityToken,omitempty" toml:"IdentityToken,omitempty"`
 }
 
 // AuthCheck validates the given credentials. It returns nil if successful.
@@ -161,7 +182,7 @@ type AuthStatus struct {
 func (c *Client) AuthCheck(conf *AuthConfiguration) (AuthStatus, error) {
 	var authStatus AuthStatus
 	if conf == nil {
-		return authStatus, fmt.Errorf("conf is nil")
+		return authStatus, errors.New("conf is nil")
 	}
 	resp, err := c.do("POST", "/auth", doOptions{data: conf})
 	if err != nil {
