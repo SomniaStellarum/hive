@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -97,7 +98,8 @@ func benchmark(daemon *docker.Client, client, benchmarker string, overrides []st
 
 	// Start the client container and retrieve its IP address for the benchmarker
 	clogger.Debug("running client container")
-	cwaiter, err := runContainer(daemon, cc.ID, clogger, filepath.Join(logdir, "client.log"), false)
+	ctx := context.Background()
+	cwaiter, err := runContainer(daemon, cc.ID, clogger, filepath.Join(logdir, "client.log"), false, ctx)
 	if err != nil {
 		clogger.Error("failed to run client", "error", err)
 		result.Error = err
@@ -175,7 +177,8 @@ func benchmark(daemon *docker.Client, client, benchmarker string, overrides []st
 	blogger.Debug("running benchmarker container")
 
 	b.ResetTimer()
-	bwaiter, err := runContainer(daemon, vc.ID, blogger, filepath.Join(logdir, "benchmarker.log"), false)
+	ctx = context.Background()
+	bwaiter, err := runContainer(daemon, vc.ID, blogger, filepath.Join(logdir, "benchmarker.log"), false, ctx)
 	if err != nil {
 		blogger.Error("failed to run benchmarker", "error", err)
 		result.Error = err

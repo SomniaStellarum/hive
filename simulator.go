@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -64,8 +65,10 @@ func simulateClients(daemon *docker.Client, clientPattern, simulatorPattern stri
 
 			logdir := filepath.Join(hiveLogsFolder, "simulations", fmt.Sprintf("%s[%s]", strings.Replace(simulator, "/", ":", -1), client))
 			os.RemoveAll(logdir)
-
-			result := simulate(daemon, clientImage, simulatorImage, overrides, logger, logdir)
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			result := simulate(daemon, clientImage, simulatorImage, overrides, logger, logdir, ctx)
 			if result.Success {
 				logger.Info("simulation passed", "time", result.End.Sub(result.Start))
 			} else {
@@ -80,7 +83,7 @@ func simulateClients(daemon *docker.Client, clientPattern, simulatorPattern stri
 // simulate starts a simulator service locally, starts a controlling container
 // and executes its commands until torn down. The exit statis of the controller
 // container will signal whether the simulation passed or failed.
-func simulate(daemon *docker.Client, client, simulator string, overrides []string, logger log15.Logger, logdir string) *simulationResult {
+func simulate(daemon *docker.Client, client, simulator string, overrides []string, logger log15.Logger, logdir string, ctx context.Context) *simulationResult {
 	logger.Info("running client simulation")
 	result := &simulationResult{
 		Start: time.Now(),
@@ -123,7 +126,10 @@ func simulate(daemon *docker.Client, client, simulator string, overrides []strin
 
 	// Start the tester container and wait until it finishes
 	slogger.Debug("running simulator container")
-	waiter, err := runContainer(daemon, sc.ID, slogger, filepath.Join(logdir, "simulator.log"), false)
+	ctx = context.Background()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	waiter, err := runContainer(daemon, sc.ID, slogger, filepath.Join(logdir, "simulator.log"), false, ctx)
 	if err != nil {
 		slogger.Error("failed to run simulator", "error", err)
 		result.Error = err
@@ -273,7 +279,10 @@ func (h *simulatorAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			logger = logger.New("id", container.ID[:8])
 
 			logfile := fmt.Sprintf("client-%s.log", container.ID[:8])
-			waiter, err := runContainer(h.daemon, container.ID, logger, filepath.Join(h.logdir, logfile), false)
+			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			waiter, err := runContainer(h.daemon, container.ID, logger, filepath.Join(h.logdir, logfile), false, ctx)
 			if err != nil {
 				logger.Error("failed to start client", "error", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)

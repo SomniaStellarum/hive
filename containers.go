@@ -6,6 +6,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -314,7 +315,7 @@ func copyBetweenContainers(daemon *docker.Client, dest, src string, path, target
 // runContainer attaches to the output streams of an existing container, then
 // starts executing the container and returns the CloseWaiter to allow the caller
 // to wait for termination.
-func runContainer(daemon *docker.Client, id string, logger log15.Logger, logfile string, shell bool) (docker.CloseWaiter, error) {
+func runContainer(daemon *docker.Client, id string, logger log15.Logger, logfile string, shell bool, ctx context.Context) (docker.CloseWaiter, error) {
 	// If we're the outer shell, log straight to stderr, nothing fancy
 	stdout := io.Writer(os.Stdout)
 	stream := io.Writer(os.Stderr)
@@ -369,7 +370,7 @@ func runContainer(daemon *docker.Client, id string, logger log15.Logger, logfile
 	}
 	// Start the requested container and wait until it terminates
 	logger.Debug("starting container")
-	if err := daemon.StartContainer(id, nil); err != nil {
+	if err := daemon.StartContainerWithContext(id, nil, ctx); err != nil {
 		logger.Error("failed to start container", "error", err)
 		return nil, err
 	}

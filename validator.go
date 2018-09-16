@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -87,7 +88,8 @@ func validate(daemon *docker.Client, client, validator string, overrides []strin
 
 	// Start the client container and retrieve its IP address for the validator
 	clogger.Debug("running client container")
-	cwaiter, err := runContainer(daemon, cc.ID, clogger, filepath.Join(logdir, "client.log"), false)
+	ctx := context.Background()
+	cwaiter, err := runContainer(daemon, cc.ID, clogger, filepath.Join(logdir, "client.log"), false, ctx)
 	if err != nil {
 		clogger.Error("failed to run client", "error", err)
 		result.Error = err
@@ -150,7 +152,8 @@ func validate(daemon *docker.Client, client, validator string, overrides []strin
 
 	// Start the tester container and wait until it finishes
 	vlogger.Debug("running validator container")
-	vwaiter, err := runContainer(daemon, vc.ID, vlogger, filepath.Join(logdir, "validator.log"), false)
+	ctx = context.Background()
+	vwaiter, err := runContainer(daemon, vc.ID, vlogger, filepath.Join(logdir, "validator.log"), false, ctx)
 	if err != nil {
 		vlogger.Error("failed to run validator", "error", err)
 		result.Error = err

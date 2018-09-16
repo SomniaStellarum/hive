@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/signal"
@@ -36,7 +37,8 @@ func makeGenesisDAG(daemon *docker.Client, cacher *buildCacher) error {
 	// Start generating the genesis ethash DAG
 	log15.Info("generating genesis DAG")
 
-	waiter, err := runContainer(daemon, ethash.ID, log15.Root(), "", true)
+	ctx := context.Background()
+	waiter, err := runContainer(daemon, ethash.ID, log15.Root(), "", true, ctx)
 	if err != nil {
 		log15.Error("failed to execute ethash", "error", err)
 		return err
