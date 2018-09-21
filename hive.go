@@ -25,6 +25,8 @@ var (
 	simulatorPattern = flag.String("sim", "", "Regexp selecting the simulation tests to run")
 	benchmarkPattern = flag.String("bench", "", "Regexp selecting the benchmarks to run")
 
+	dockerTimeoutMins = flag.Int64("docker-timeout", 10, "Timeout in minutes for how long to run docker client before it is stopped")
+
 	loglevelFlag = flag.Int("loglevel", 3, "Log level to use for displaying system events")
 )
 

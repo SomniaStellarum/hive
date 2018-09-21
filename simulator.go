@@ -66,7 +66,7 @@ func simulateClients(daemon *docker.Client, clientPattern, simulatorPattern stri
 			logdir := filepath.Join(hiveLogsFolder, "simulations", fmt.Sprintf("%s[%s]", strings.Replace(simulator, "/", ":", -1), client))
 			os.RemoveAll(logdir)
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Duration(*dockerTimeoutMins)*time.Minute)
 			defer cancel()
 			result := simulate(daemon, clientImage, simulatorImage, overrides, logger, logdir, ctx)
 			if result.Success {
@@ -83,7 +83,15 @@ func simulateClients(daemon *docker.Client, clientPattern, simulatorPattern stri
 // simulate starts a simulator service locally, starts a controlling container
 // and executes its commands until torn down. The exit statis of the controller
 // container will signal whether the simulation passed or failed.
-func simulate(daemon *docker.Client, client, simulator string, overrides []string, logger log15.Logger, logdir string, ctx context.Context) *simulationResult {
+func simulate(
+	daemon *docker.Client,
+	client,
+	simulator string,
+	overrides []string,
+	logger log15.Logger,
+	logdir string,
+	ctx context.Context,
+) *simulationResult {
 	logger.Info("running client simulation")
 	result := &simulationResult{
 		Start: time.Now(),
@@ -127,7 +135,7 @@ func simulate(daemon *docker.Client, client, simulator string, overrides []strin
 	// Start the tester container and wait until it finishes
 	slogger.Debug("running simulator container")
 	ctx = context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(*dockerTimeoutMins)*time.Minute)
 	defer cancel()
 	waiter, err := runContainer(daemon, sc.ID, slogger, filepath.Join(logdir, "simulator.log"), false, ctx)
 	if err != nil {
@@ -280,7 +288,7 @@ func (h *simulatorAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 			logfile := fmt.Sprintf("client-%s.log", container.ID[:8])
 			ctx := context.Background()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Duration(*dockerTimeoutMins)*time.Minute)
 			defer cancel()
 			waiter, err := runContainer(h.daemon, container.ID, logger, filepath.Join(h.logdir, logfile), false, ctx)
 			if err != nil {
