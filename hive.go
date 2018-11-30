@@ -45,11 +45,8 @@ var (
 	dockerTimeoutDuration = time.Duration(*dockerTimeout) * time.Minute
 	timeoutCheck          = flag.Int("timeoutcheck", 30, "Seconds to check for timeouts of containers")
 	timeoutCheckDuration  = time.Duration(*timeoutCheck) * time.Second
-<<<<<<< HEAD
-=======
 
 	runPath = time.Now().Format("20060102150405")
->>>>>>> upstream/master
 )
 
 func main() {

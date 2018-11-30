@@ -192,18 +192,6 @@ func startSimulatorAPI(daemon *docker.Client, clients map[string]string, simulat
 	// Serve connections until the listener is terminated
 	logger.Debug("starting simulator API server")
 	sim := &simulatorAPIHandler{
-<<<<<<< HEAD
-		listener:     listener,
-		daemon:       daemon,
-		logger:       logger,
-		logdir:       logdir,
-		client:       client,
-		simulator:    simulator,
-		overrides:    overrides,
-		nodes:        make(map[string]*docker.Container),
-		nodesTimeout: make(map[string]time.Time),
-		result:       result,
-=======
 		listener:         listener,
 		daemon:           daemon,
 		logger:           logger,
@@ -216,7 +204,6 @@ func startSimulatorAPI(daemon *docker.Client, clients map[string]string, simulat
 		nodeNames:        make(map[string]string),
 		nodesTimeout:     make(map[string]time.Time),
 		result:           results, //the simulator now has access to a map of results-by-client. The simulator decides which clients to run/
->>>>>>> upstream/master
 	}
 	go sim.CheckTimeout()
 	go http.Serve(listener, sim)
@@ -245,48 +232,6 @@ type simulatorAPIHandler struct {
 
 	result map[string]map[string]*simulationResult //simulation result log per client name
 	lock   sync.RWMutex
-}
-
-<<<<<<< HEAD
-	runner       *docker.Container
-	nodes        map[string]*docker.Container
-	nodesTimeout map[string]time.Time
-=======
-// CheckTimeout is a goroutine that checks if the timeout has passed and stops
-// container if it has.
-func (h *simulatorAPIHandler) CheckTimeout() {
-	for {
-		h.lock.Lock()
-		for id, c := range h.nodes {
-			if !c.State.Running || (time.Now().After(h.nodesTimeout[id])) {
-				h.terminateContainer(id, nil)
-			}
-		}
-		h.lock.Unlock()
-		time.Sleep(timeoutCheckDuration)
-	}
-}
->>>>>>> upstream/master
-
-func (h *simulatorAPIHandler) terminateContainer(id string, w http.ResponseWriter) {
-	node, ok := h.nodes[id]
-	delete(h.nodes, id) // Almost correct, removal may fail. Lock is too expensive though
-	delete(h.nodesTimeout, id)
-
-	if !ok {
-		h.logger.Error("unknown client deletion requested", "id", id)
-		if w != nil {
-			http.Error(w, "not found", http.StatusNotFound)
-		}
-		return
-	}
-	h.logger.Debug("deleting client container", "id", node.ID[:8])
-	if err := h.daemon.RemoveContainer(docker.RemoveContainerOptions{ID: node.ID, Force: true}); err != nil {
-		h.logger.Error("failed to delete client ", "id", id, "error", err)
-		if w != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}
 }
 
 // CheckTimeout is a goroutine that checks if the timeout has passed and stops
@@ -496,14 +441,9 @@ func (h *simulatorAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			//  Container online and responsive, return its ID for later reference
 			fmt.Fprintf(w, "%s", containerID)
 			h.lock.Lock()
-<<<<<<< HEAD
-			h.nodes[container.ID[:8]] = container
-			h.nodesTimeout[container.ID[:8]] = time.Now().Add(dockerTimeoutDuration)
-=======
 			h.nodes[containerID] = container
 			h.nodeNames[containerID] = clientName
 			h.nodesTimeout[containerID] = time.Now().Add(dockerTimeoutDuration)
->>>>>>> upstream/master
 			h.lock.Unlock()
 			return
 

@@ -162,11 +162,7 @@ func buildNestedImages(daemon *docker.Client, root string, pattern string, kind 
 			image               = strings.Replace(filepath.Join(hiveImageNamespace, root, name), string(os.PathSeparator), "/", -1)
 			logger              = log15.New(kind, name)
 		)
-<<<<<<< HEAD
-		if err := buildImage(daemon, image, context, cacher, logger); err != nil {
-=======
 		if err := buildImage(daemon, image, context, cacher, logger, dockerfile); err != nil {
->>>>>>> upstream/master
 			berr := &buildError{err: fmt.Errorf("%s: %v", context, err), client: name}
 			return nil, berr
 		}
