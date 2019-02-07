@@ -14,17 +14,21 @@ RUN apk add --update bash jq go git make gcc musl-dev              \
 RUN wget https://github.com/jgm/pandoc/releases/download/2.5/pandoc-2.5-linux.tar.gz
 RUN tar xvzf pandoc-2.5-linux.tar.gz --strip-components 1 -C /usr/local
 
-ENV GOPATH /gopath
+ENV GOPATH $HOME/go
 ENV PATH   $GOPATH/bin:$PATH
-
-COPY . $GOPATH/src/github.com/ethereum/go-ethereum
-RUN cd $GOPATH/src/github.com/ethereum/go-ethereum && make geth
-RUN cd $HOME
+COPY go-ethereum $GOPATH/src/github.com/ethereum/go-ethereum
+WORKDIR $GOPATH/src/github.com/ethereum/go-ethereum
+RUN make geth
+WORKDIR $HOME/
 RUN mkdir kevm
-RUN cd kevm
-RUN git clone --depth 1                                          \
-  https://github.com/kframework/evm-semantics                 && \
-  cd evm-semantics && env && make deps && make
+WORKDIR $HOME/kevm
+RUN git clone https://github.com/kframework/evm-semantics
+WORKDIR $HOME/kevm/evm-semantics
+RUN git submodule update --init --recursive
+
+RUN env
+RUN make deps
+RUN make build
 
 ARG KEVM_PORT
 ENV KEVM_PORT ${KEVM_PORT:-8888}
